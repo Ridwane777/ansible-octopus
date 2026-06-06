@@ -2,5 +2,3 @@
 Vagrantfile
 production
 .vault_pass
-
-git_auto_chunks.sh
