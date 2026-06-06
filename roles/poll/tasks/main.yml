@@ -1,0 +1,65 @@
+- name: Install Python, gunicorn and system dependencies
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-flask
+      - python3-redis
+      - gunicorn
+    state: present
+    update_cache: true
+  become: true
+
+- name: Extract poll archive safely using playbook root path
+  unarchive:
+    src: poll.tar
+    dest: /opt/
+    remote_src: no
+    owner: root
+    group: root
+    creates: /opt/poll/app.py
+  become: true
+
+- name: Install Python dependencies from requirements.txt
+  pip:
+    requirements: /opt/poll/requirements.txt
+    executable: pip3
+  become: true
+
+- name: Copy poll systemd service file
+  copy:
+    dest: /etc/systemd/system/poll.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Poll voting application
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=root
+      WorkingDirectory=/opt/poll
+      ExecStart=/usr/bin/gunicorn app:app -b 0.0.0.0:80 --log-file=- --access-logfile=- --workers 4 --keep-alive 0
+      Restart=always
+      Environment=REDIS_HOST={{ hostvars['redis-1']['ansible_host'] }}
+      Environment=REDIS_PORT=6379
+
+      [Install]
+      WantedBy=multi-user.target
+  become: true
+  register: poll_service_updated
+
+- name: Reload and restart poll if service file changed
+  systemd:
+    name: poll
+    daemon_reload: true
+    state: restarted
+  become: true
+  when: poll_service_updated.changed
+
+- name: Ensure poll service is started and enabled
+  systemd:
+    name: poll
+    enabled: true
+    state: started
+  become: true
