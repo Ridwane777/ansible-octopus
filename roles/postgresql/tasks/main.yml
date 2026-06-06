@@ -1,0 +1,97 @@
+- name: "PostgreSQL | Remove all old PostgreSQL versions"
+  apt:
+    name: ["postgresql-14", "postgresql-client-14"]
+    state: absent
+    purge: yes
+  become: true
+
+- name: "PostgreSQL | Install PostgreSQL 16"
+  apt:
+    name: ["postgresql-16", "python3-psycopg2"]
+    state: present
+  become: true
+
+- name: "PostgreSQL | Create main cluster for PG 16"
+  shell: "pg_createcluster 16 main --start"
+  args:
+    creates: "/etc/postgresql/16/main/postgresql.conf"
+  ignore_errors: yes
+  become: true
+
+- name: "PostgreSQL | Copy pg_hba.conf configuration"
+  template:
+    src: files/pg_hba.conf
+    dest: /etc/postgresql/16/main/pg_hba.conf
+    mode: '0640'
+    owner: postgres
+    group: postgres
+  become: true
+  register: pg_hba_updated
+
+- name: "PostgreSQL | Configure listen_addresses"
+  lineinfile:
+    path: /etc/postgresql/16/main/postgresql.conf
+    regexp: "^#?listen_addresses\\s*=\\s*.*"
+    line: "listen_addresses = '*'"
+  become: true
+  register: pg_conf_updated
+
+- name: "PostgreSQL | Restart PostgreSQL if configuration changed"
+  service:
+    name: postgresql
+    state: restarted
+  become: true
+  when: pg_hba_updated.changed or pg_conf_updated.changed
+
+- name: "PostgreSQL | Ensure PostgreSQL 16 is running"
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: true
+
+- name: "PostgreSQL | Wait for PostgreSQL to be ready"
+  wait_for:
+    host: localhost
+    port: 5432
+    state: started
+    timeout: 30
+  become: true
+
+- name: "PostgreSQL | Create database user 'paul'"
+  postgresql_user:
+    name: "{{ postgres_user }}"
+    password: "{{ postgres_password }}"
+  become: yes
+  become_user: postgres 
+
+- name: "PostgreSQL | Create database 'paul'"
+  postgresql_db:
+    name: paul
+    owner: paul
+  become: yes
+  become_user: postgres
+
+- name: "PostgreSQL | Copy schema.sql to remote"
+  copy:
+    src: schema.sql
+    dest: /tmp/schema.sql
+    mode: '0644'
+  become: true
+
+- name: "PostgreSQL | Check if votes table exists"
+  postgresql_query:
+    login_db: paul
+    query: "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'votes')"
+  become: yes
+  become_user: postgres
+  register: votes_table_exists
+
+- name: "PostgreSQL | Import schema.sql"
+  postgresql_db:
+    name: paul
+    state: restore
+    target: /tmp/schema.sql
+  become: yes
+  become_user: postgres
+  when: not votes_table_exists.query_result[0].exists
