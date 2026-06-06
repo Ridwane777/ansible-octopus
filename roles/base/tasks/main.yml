@@ -1,0 +1,37 @@
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Upgrade all system packages
+  apt:
+    upgrade: dist
+    update_cache: yes
+    dpkg_options: 'force-confold,force-confdef'
+  ignore_errors: yes
+  
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - git
+      - unzip
+      - tmux
+      - htop
+      - rsync
+      - vim
+      - ufw
+      - sudo
+    state: present
+
+- name: Set system timezone to Europe/Paris
+  community.general.timezone:
+    name: Europe/Paris
+
+- name: Ensure SSH service is started and enable at boot
+  ansible.builtin.service:
+    name: ssh
+    state: started
+    enabled: yes
