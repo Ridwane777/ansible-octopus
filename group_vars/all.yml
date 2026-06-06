@@ -1,2 +1,6 @@
-ansible_user: vagrant
+ansible_user: ubuntu
 ansible_python_interpreter: /usr/bin/python3
+
+postgres_user: paul
+postgres_db: paul
+postgres_password: "{{ vault_postgres_password }}"
