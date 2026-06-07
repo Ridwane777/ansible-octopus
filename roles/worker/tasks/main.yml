@@ -1,4 +1,3 @@
----
 - name: Install Java 21 and Maven
   apt:
     name:
@@ -24,39 +23,13 @@
     creates: /opt/worker/target/worker-jar-with-dependencies.jar
   become: true
 
-- name: Copy worker systemd service file
-  copy:
+- name: Copy worker systemd service file dynamically
+  template:
+    src: files/worker.service
     dest: /etc/systemd/system/worker.service
     mode: '0644'
-    content: |
-      [Unit]
-      Description=Java Worker Service
-      After=network.target
-
-      [Service]
-      User=root
-      WorkingDirectory=/opt/worker
-      ExecStart=/usr/bin/java -jar /opt/worker/target/worker-jar-with-dependencies.jar
-      Restart=always
-      Environment=REDIS_HOST={{ hostvars['redis-1']['ansible_host'] }}
-      Environment=POSTGRES_HOST={{ hostvars['postgresql-1']['ansible_host'] }}
-      Environment=POSTGRES_PORT=5432
-      Environment=POSTGRES_USER={{ postgres_user }}
-      Environment=POSTGRES_PASSWORD={{ postgres_password }}
-      Environment=POSTGRES_DB={{ postgres_db }}
-
-      [Install]
-      WantedBy=multi-user.target
   become: true
-  register: worker_service_updated
-
-- name: Reload and restart worker if service file changed
-  systemd:
-    name: worker
-    daemon_reload: true
-    state: restarted
-  become: true
-  when: worker_service_updated.changed
+  notify: restart worker service
 
 - name: Ensure worker service is started and enabled
   systemd:

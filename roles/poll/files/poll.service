@@ -4,11 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
+User=root
 WorkingDirectory=/opt/poll
 ExecStart=/usr/bin/gunicorn app:app -b 0.0.0.0:80 --log-file=- --access-logfile=- --workers 4 --keep-alive 0
 Restart=always
-Environment=REDIS_HOST=10.178.161.32
+RestartSec=10
+Environment=REDIS_HOST={{ hostvars['redis-1']['ansible_host'] }}
 Environment=REDIS_PORT=6379
 
 [Install]
