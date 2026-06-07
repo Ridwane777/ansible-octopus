@@ -1,4 +1,3 @@
----
 - name: Install curl and prerequisites
   apt:
     name:

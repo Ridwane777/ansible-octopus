@@ -1,4 +1,3 @@
----
 - name: "PostgreSQL | Remove all old PostgreSQL versions"
   apt:
     name: ["postgresql-14", "postgresql-client-14"]
