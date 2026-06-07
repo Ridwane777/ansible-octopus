@@ -24,6 +24,7 @@
   pip:
     requirements: /opt/poll/requirements.txt
     executable: pip3
+    extra_args: "--break-system-packages"
   become: true
 
 - name: Copy poll systemd service file
