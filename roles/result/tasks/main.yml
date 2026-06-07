@@ -1,0 +1,101 @@
+---
+- name: Install curl and prerequisites
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+  become: true
+
+- name: Autoremove old unused dependencies
+  apt:
+    autoremove: yes
+  become: true
+
+- name: Add NodeSource GPG apt key
+  get_url:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    dest: /usr/share/keyrings/nodesource.asc
+    mode: '0644'
+  become: true
+
+- name: Add NodeSource Node.js 20 repository
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nodesource.asc] https://deb.nodesource.com/node_20.x nodistro main"
+    state: present
+    filename: nodesource
+  become: true
+
+- name: Install Node.js from NodeSource
+  apt:
+    name: nodejs
+    state: present
+    update_cache: true
+  become: true
+
+- name: Create application directory for result
+  file:
+    path: /opt/result
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+  become: true
+
+- name: Extract result archive safely using playbook root path
+  unarchive:
+    src: result.tar
+    dest: /opt/
+    remote_src: no
+    owner: root
+    group: root
+    creates: /opt/result/server.js
+  become: true
+
+- name: Install Node.js dependencies using npm module
+  npm:
+    path: /opt/result
+    state: present
+  become: true
+
+- name: Copy result systemd service file
+  copy:
+    dest: /etc/systemd/system/result.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Result web application
+      After=network.target
+
+      [Service]
+      User=root
+      WorkingDirectory=/opt/result
+      ExecStart=/usr/bin/node server.js
+      Restart=always
+      Environment=POSTGRES_HOST={{ hostvars['postgresql-1']['ansible_host'] }}
+      Environment=POSTGRES_PORT=5432
+      Environment=POSTGRES_USER={{ postgres_user }}
+      Environment=POSTGRES_PASSWORD={{ postgres_password }}
+      Environment=POSTGRES_DB={{ postgres_db }}
+
+      [Install]
+      WantedBy=multi-user.target
+  become: true
+  register: result_service_updated
+
+- name: Reload and restart result if service file changed
+  systemd:
+    name: result
+    daemon_reload: true
+    state: restarted
+  become: true
+  when: result_service_updated.changed
+
+- name: Ensure result service is started and enabled
+  systemd:
+    name: result
+    enabled: true
+    state: started
+  become: true

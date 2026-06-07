@@ -1,0 +1,45 @@
+- name: Prerequisites - Ensure package manager cache is up to date
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Update apt cache if necessary
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+- name: "Octopus | Base configuration"
+  hosts: all
+  become: yes
+  roles:
+    - base
+
+- name: Deploy Redis cache
+  hosts: redis
+  become: true
+  roles:
+    - redis
+
+- name: Deploy PostgreSQL database
+  hosts: postgresql
+  become: true
+  roles:
+    - postgresql
+
+- name: Deploy Java / Maven Worker
+  hosts: worker
+  become: true
+  roles:
+    - worker
+
+- name: Deploy Poll voting application
+  hosts: poll
+  become: true
+  roles:
+    - poll
+
+- name: Deploy Result application
+  hosts: result
+  become: true
+  roles:
+    - result
