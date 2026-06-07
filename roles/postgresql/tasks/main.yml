@@ -1,3 +1,4 @@
+---
 - name: "PostgreSQL | Remove all old PostgreSQL versions"
   apt:
     name: ["postgresql-14", "postgresql-client-14"]
@@ -5,9 +6,32 @@
     purge: yes
   become: true
 
+- name: "PostgreSQL | Add PostgreSQL apt key"
+  get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /usr/share/keyrings/pgdg.asc
+    mode: '0644'
+  become: true
+
+- name: "PostgreSQL | Add PostgreSQL repository"
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main"
+    state: present
+    filename: pgdg
+  become: true
+
 - name: "PostgreSQL | Install PostgreSQL 16"
   apt:
-    name: ["postgresql-16", "python3-psycopg2"]
+    name:
+      - postgresql-16
+      - python3-psycopg2
+    state: present
+    update_cache: true
+  become: true
+
+- name: "PostgreSQL | Install acl package for become_user"
+  apt:
+    name: acl
     state: present
   become: true
 
@@ -63,7 +87,7 @@
     name: "{{ postgres_user }}"
     password: "{{ postgres_password }}"
   become: yes
-  become_user: postgres 
+  become_user: postgres
 
 - name: "PostgreSQL | Create database 'paul'"
   postgresql_db:
