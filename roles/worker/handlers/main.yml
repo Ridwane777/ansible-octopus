@@ -1,0 +1,6 @@
+- name: restart worker service
+  systemd:
+    name: worker
+    daemon_reload: true
+    state: restarted
+  become: true

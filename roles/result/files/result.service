@@ -1,1 +1,20 @@
 
+[Unit]
+Description=Result web application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/result
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+Environment=POSTGRES_HOST={{ hostvars['postgresql-1']['ansible_host'] }}
+Environment=POSTGRES_PORT=5432
+Environment=POSTGRES_USER={{ postgres_user }}
+Environment=POSTGRES_PASSWORD={{ postgres_password }}
+Environment=POSTGRES_DB={{ postgres_db }}
+
+[Install]
+WantedBy=multi-user.target

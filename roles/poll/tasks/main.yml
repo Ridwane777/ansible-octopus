@@ -27,36 +27,13 @@
     extra_args: "--break-system-packages"
   become: true
 
-- name: Copy poll systemd service file
-  copy:
+- name: Copy poll systemd service file dynamically
+  template:
+    src: files/poll.service
     dest: /etc/systemd/system/poll.service
     mode: '0644'
-    content: |
-      [Unit]
-      Description=Poll voting application
-      After=network.target
-
-      [Service]
-      Type=simple
-      User=root
-      WorkingDirectory=/opt/poll
-      ExecStart=/usr/bin/gunicorn app:app -b 0.0.0.0:80 --log-file=- --access-logfile=- --workers 4 --keep-alive 0
-      Restart=always
-      Environment=REDIS_HOST={{ hostvars['redis-1']['ansible_host'] }}
-      Environment=REDIS_PORT=6379
-
-      [Install]
-      WantedBy=multi-user.target
   become: true
   register: poll_service_updated
-
-- name: Reload and restart poll if service file changed
-  systemd:
-    name: poll
-    daemon_reload: true
-    state: restarted
-  become: true
-  when: poll_service_updated.changed
 
 - name: Ensure poll service is started and enabled
   systemd:
