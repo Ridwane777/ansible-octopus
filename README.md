@@ -47,3 +47,7 @@ ansible-playbook -i production playbook.yml
 ## Author
 
 [Ridwane777](https://github.com/Ridwane777)
+
+## License
+
+[MIT](LICENSE)
